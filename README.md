@@ -18,6 +18,9 @@
 
 - **灵活的 .NET 版本支持**  
   `ApplicationServiceInterface` 使用 **netstandard2.0**，与自动代码生成器兼容性更好，而其实现层 `ApplicationServiceImpl` 可使用更高版本（如 **net9.0**），满足现代 .NET 新特性的需求。
+  
+- **模板代码生成能力**  
+  除了Controller自动代码生成，还提供了模型的CRUD代码生成，在`Domain`的**领域实体 (Entities)**文件夹中创建好实体后，启动项目，访问`http://localhost/swagger/index.html`，会暴露一个业务代码生成接口，输入实体名称和描述即可自动生成应用层、仓储相关代码，可直接拷贝到项目中使用。
 
 ## 快速开始
 
@@ -50,23 +53,6 @@
      ```
    - 你可以使用 [Swagger](https://swagger.io/tools/swagger-ui/)、[Postman](https://www.postman.com/) 等工具测试自动生成的接口。  
    - 你会发现，接口对应 `IApplicationService` 中的方法会自动暴露成 API 端点。
-
-## 项目结构
-
-通常一个示例解决方案结构可能如下所示：
-├─ src │ ├─ Domain │ │ ├─ Entities │ │ ├─ Enums │ │ └─ IRepository │ ├─ ApplicationServiceInterface (netstandard2.0) │ │ ├─ IApplicationService1.cs │ │ └─ IApplicationService2.cs │ ├─ ApplicationServiceImpl (net9.0) │ │ ├─ ApplicationService1.cs │ │ └─ ApplicationService2.cs │ ├─ Infrastructure │ │ ├─ Repository │ │ └─ Migrations │ └─ WebApi │ ├─ Controllers (由 source generator 自动生成) │ ├─ Program.cs │ ├─ Startup.cs │ └─ ... └─ tests ├─ UnitTests └─ IntegrationTests
-
-## 配置与定制
-
-- **Source Generator 配置**  
-  在 `ApplicationServiceInterface` 或 `WebApi` 的 `.csproj` 文件中，配置生成器选项，指定命名空间、输出路径等。
-
-- **异常处理 / 日志**  
-  在 `WebApi` 层可以集成 Serilog、NLog 或其他日志库，并通过中间件进行全局异常捕获，返回统一格式的错误。
-
-- **验证**  
-  你可使用 **FluentValidation** 或 .NET 内置 **DataAnnotation** 进行参数验证。只要在 Service 层或实体上声明验证规则，自动生成的 Controller 也能尊重这些验证逻辑。
-
 
 ## 许可证
 
