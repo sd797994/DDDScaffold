@@ -26,10 +26,7 @@ namespace Infrastructure.DataBase
         public DbSet<RolePermission> RolePermission { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            if (!optionsBuilder.IsConfigured)
-            {
-                optionsBuilder.UseMySql("Server=localhost;Database=douyin;User=root;Password=3wdianFybcn#rds", new MySqlServerVersion(new Version(5, 7, 0)));
-            }
+
         }
         public override int SaveChanges()
         {
