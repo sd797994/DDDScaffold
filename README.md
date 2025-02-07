@@ -35,9 +35,12 @@
    - 在 **Domain** 层中创建你的 **领域实体 (Entities)**、**枚举 (Enums)** 和 **仓储接口 (IRepository)** 等。
    - 在 `ApplicationServiceInterface` 项目里，定义 **IApplicationService** 系列接口（对外暴露的方法契约）。
    - 在 `ApplicationServiceImpl` 项目里，实现这些接口，编写具体的业务逻辑。
-   OR
+   - **OR** 
    - 在 **Domain** 层中创建你的 **领域实体 (Entities)**、**枚举 (Enums)** 。
    - F5启动项目，访问`http://localhost/swagger/index.html` 使用/api/codebuilder接口自动生成包含CRUD的`ApplicationServiceInterface`、`ApplicationServiceImpl`、`IRepository`、`Repository`代码。
+   - 下载文件夹并解压缩，然后将文件直接拷贝到项目根目录
+   - 在 `ApplicationServiceInterface` 项目里，定义 **IApplicationService** 系列接口（新增定义 or 根据需要修改CRUD定义）。
+   - 在 `ApplicationServiceImpl` 项目里，（新增实现 or 根据需要修改CRUD实现）。
    
 3. **自动生成 Controller**  
    - Source Generator 会扫描 `ApplicationServiceInterface` 中的接口，自动生成相应的 Controller 代码。
