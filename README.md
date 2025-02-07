@@ -46,7 +46,7 @@
    - 你几乎无需编写手动的 `Controller`，让你把精力专注于应用逻辑。
 
 5. **运行并测试**  
-   - 首次运行需要创建数据库并修改`appsettings.json`指向你的数据库，通过执行根目录下的数据库迁移命令.bat来初始化RBAC的数据库迁移命令
+   - 首次运行需要创建数据库并修改`appsettings.json`指向你的数据库，通过执行根目录下的`数据库迁移命令.bat`来初始化RBAC的数据库迁移命令
    - 进入 `WebApi` 项目目录后启动：
      ```bash
      dotnet run --project src/WebApi/WebApi.csproj
