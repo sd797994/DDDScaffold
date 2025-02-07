@@ -30,22 +30,21 @@
      git clone https://github.com/sd797994/DDDScaffold.git
      cd DDDScaffold
      ```
-2. **添加引用**  
-   - 在你的 **.NET 解决方案** 中，参考/引用对应的项目或包：
-     - `ApplicationServiceInterface`（netstandard2.0），主要放接口定义。
-     - `ApplicationServiceImpl`（net9.0或你的目标 .NET 版本），主要放接口实现。
 
-3. **定义领域模型与应用服务**  
+2. **定义领域模型与应用服务**  
    - 在 **Domain** 层中创建你的 **领域实体 (Entities)**、**枚举 (Enums)** 和 **仓储接口 (IRepository)** 等。
    - 在 `ApplicationServiceInterface` 项目里，定义 **IApplicationService** 系列接口（对外暴露的方法契约）。
    - 在 `ApplicationServiceImpl` 项目里，实现这些接口，编写具体的业务逻辑。
-
-4. **自动生成 Controller**  
+   OR
+   - 在 **Domain** 层中创建你的 **领域实体 (Entities)**、**枚举 (Enums)** 。
+   - F5启动项目，访问`http://localhost/swagger/index.html` 使用/api/codebuilder接口自动生成包含CRUD的`ApplicationServiceInterface`、`ApplicationServiceImpl`、`IRepository`、`Repository`代码。
+   
+3. **自动生成 Controller**  
    - Source Generator 会扫描 `ApplicationServiceInterface` 中的接口，自动生成相应的 Controller 代码。
    - 默认情况下，这些自动生成的 Controller 会放到指定的命名空间/文件夹（可在 `.csproj` 或生成器配置中设置）。
    - 你几乎无需编写手动的 `Controller`，让你把精力专注于应用逻辑。
 
-5. **运行并测试**  
+4. **运行并测试**  
    - 首次运行需要创建数据库并修改`appsettings.json`指向你的数据库，通过执行根目录下的`数据库迁移命令.bat`来初始化RBAC的数据库迁移命令
    - 进入 `WebApi` 项目目录后启动：
      ```bash
