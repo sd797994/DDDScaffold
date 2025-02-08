@@ -44,7 +44,6 @@
    
 3. **自动生成 Controller**  
    - Source Generator 会扫描 `ApplicationServiceInterface` 中的接口，自动生成相应的 Controller 代码。
-   - 默认情况下，这些自动生成的 Controller 会放到指定的命名空间/文件夹（可在 `.csproj` 或生成器配置中设置）。
    - 你几乎无需编写手动的 `Controller`，让你把精力专注于应用逻辑。
 
 4. **运行并测试**  
