@@ -81,13 +81,13 @@ namespace WebApi.Controllers
                         public interface I_typename_ApplicationService
                         {
                             [ActionGeneratorMethod(RequestType.GET, "获取_desc_", "getinfo", true)]
-                            Task<ApiResult<Get_typename_Resp>> Get_typename_Info(GetModelReq input);
+                            Task<Get_typename_Resp> Get_typename_Info(GetModelReq input);
                             [ActionGeneratorMethod(RequestType.Post,"保存_desc_", "edit", true)]
-                            Task<ApiResult> Save_typename_(Edit_typename_Req input);
+                            Task Save_typename_(Edit_typename_Req input);
                             [ActionGeneratorMethod(RequestType.GET, "获取_desc_分页", "page", true)]
-                            Task<ApiResult<PageQueryResonseBase<Get_typename_Resp>>> Get_typename_ByPage(PageQueryInputBase input);
+                            Task<PageQueryResonseBase<Get_typename_Resp>> Get_typename_ByPage(PageQueryInputBase input);
                             [ActionGeneratorMethod(RequestType.Post, "删除_desc_", "delete", true)]
-                            Task<ApiResult> Delete_typename_(DeleteModelReq input);
+                            Task Delete_typename_(DeleteModelReq input);
                         }
                     }
                     """;
@@ -114,20 +114,20 @@ namespace WebApi.Controllers
                                 this._stypename_Repository = _stypename_Repository;
                                 this.unitofWork = unitofWork;
                             }
-                            public async Task<ApiResult<Get_typename_Resp>> Get_typename_Info(GetModelReq input)
+                            public async Task<Get_typename_Resp> Get_typename_Info(GetModelReq input)
                             {
                                 if (input != null && input.Id != 0)
                                 {
                                     var _stypename_ = await _stypename_Repository.GetAsync(input.Id);
                                     if (_stypename_ != null)
                                     {
-                                        return ApiResult<Get_typename_Resp>.Ok(_stypename_.CopyTo<_typename_, Get_typename_Resp>());
+                                        return _stypename_.CopyTo<Get_typename_Resp>();
                                     }
                                 }
                                 throw new ApplicationServiceException("没有找到对应的记录,请确定id是否正确");
                             }
 
-                            public async Task<ApiResult> Save_typename_(Edit_typename_Req input)
+                            public async Task Save_typename_(Edit_typename_Req input)
                             {
                                 if (input == null)
                                 {
@@ -146,21 +146,20 @@ namespace WebApi.Controllers
                                     }
                                     else
                                     {
-                                        var _stypename_ = input.CopyTo<Edit_typename_Req, _typename_>();
+                                        var _stypename_ = input.CopyTo<_typename_>();
                                         _stypename_Repository.Add(_stypename_);
                                     }
                                 });
-                                return ApiResult.Ok(true);
                             }
 
-                            public async Task<ApiResult<PageQueryResonseBase<Get_typename_Resp>>> Get_typename_ByPage(PageQueryInputBase input)
+                            public async Task<PageQueryResonseBase<Get_typename_Resp>> Get_typename_ByPage(PageQueryInputBase input)
                             {
                                 var page = await _stypename_Repository.GetManyByPageAsync(x => true, input.GetSkip(), input.PageSize);
-                                var response = new PageQueryResonseBase<Get_typename_Resp>(page.lists.Select(x => x.CopyTo<_typename_, Get_typename_Resp>()).ToList(), page.total);
-                                return ApiResult<PageQueryResonseBase<Get_typename_Resp>>.Ok(response);
+                                var response = new PageQueryResonseBase<Get_typename_Resp>(page.lists.Select(x => x.CopyTo<Get_typename_Resp>()).ToList(), page.total);
+                                return response;
                             }
 
-                            public async Task<ApiResult> Delete_typename_(DeleteModelReq input)
+                            public async Task Delete_typename_(DeleteModelReq input)
                             {
                                 if (input != null && input.IdLists != null && input.IdLists.Any())
                                 {
@@ -168,7 +167,6 @@ namespace WebApi.Controllers
                                       _stypename_Repository.Delete(x => input.IdLists.Contains(x.Id));
                                     });
                                 }
-                                return ApiResult.Ok(true);
                             }
                         }
                     }
