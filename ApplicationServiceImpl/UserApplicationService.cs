@@ -39,10 +39,10 @@ namespace ApplicationService.ApplicationServiceImpl
                 if (userroleCount == 0)
                     throw new ApplicationServiceException("账号角色已被停用");
             }
-            var resp = user.CopyTo<User, LoginResp>();
+            var resp = user.CopyTo<LoginResp>();
             resp.Token = JwtService.GenerateToken(user.Id, user.UserName);
             resp.UserRoles = await mySqlEfContext.UserRole.Where(x => x.UserId == resp.Id).Select(x => x.RoleId).ToListAsync();
-            return ApiResult<LoginResp>.Ok(resp);
+            return ApiResult.Ok(resp);
         }
 
         public async Task<ApiResult> SaveUserInfo(EditUserReq input)
@@ -77,7 +77,7 @@ namespace ApplicationService.ApplicationServiceImpl
                     }
                     else
                     {
-                        user = input.CopyTo<EditUserReq, User>();
+                        user = input.CopyTo<User>();
                         user.Password = Common.GetMD5SaltCode(input.Password);
                         var pouser = userRepository.Add(user);
                         await unitofWork.CommitAsync();
@@ -88,7 +88,7 @@ namespace ApplicationService.ApplicationServiceImpl
                         }
                     }
                 });
-                return await Task.FromResult(ApiResult.Ok(true));
+                return ApiResult.Ok(true);
             }
             throw new ApplicationServiceException("没有传递有效的数据，无法进行记录增加/更新");
         }
@@ -104,8 +104,8 @@ namespace ApplicationService.ApplicationServiceImpl
                 var user = await userRepository.GetAsync(input.Id);
                 if (user != null)
                 {
-                    var userresp = user.CopyTo<User, GetUserResp>();
-                    return ApiResult<GetUserResp>.Ok(userresp);
+                    var userresp = user.CopyTo<GetUserResp>();
+                    return ApiResult.Ok(userresp);
                 }
             }
             throw new ApplicationServiceException("没有查到对应的用户");
@@ -132,13 +132,13 @@ namespace ApplicationService.ApplicationServiceImpl
             var optuser = await userRepository.GetManyAsync(x => lastuserid.Contains(x.Id));
             rolesPage.lists.ForEach(x =>
             {
-                var item = x.CopyTo<User, GetUserResp>();
+                var item = x.CopyTo<GetUserResp>();
                 item.LastUpdateUserName = optuser.FirstOrDefault(y => y.Id == x.LastUpdateUserId)?.RealName;
                 item.RoleNameList = userrolelist.Where(y => y.UserId == x.Id).Select(y => new UserRoleResp() { id = y.Id, Name = y.Name }).ToList();
                 userlist.Add(item);
             });
             var result = new PageQueryResonseBase<GetUserResp>(userlist, rolesPage.total);
-            return ApiResult<PageQueryResonseBase<GetUserResp>>.Ok(result);
+            return ApiResult.Ok(result);
         }
 
         public async Task<ApiResult<List<MenuRespVo>>> GetRoleMenus(GetModelReq input)
@@ -150,26 +150,26 @@ namespace ApplicationService.ApplicationServiceImpl
             var user = await userRepository.GetAsync(input.Id);
             var all = (await permissionApplicationService.GetAllPermission(new MenuReqVo() { FlatMenu = false, ShowSystem = true })).Data;
             if (user.RoleType == Domain.Enums.UserRoleType.Sup)
-                return ApiResult<List<MenuRespVo>>.Ok(all);
+                return ApiResult.Ok(all);
             var allRoles = await mySqlEfContext.UserRole.Where(x => x.UserId == input.Id).Select(x => x.RoleId).ToListAsync();
             var roles = await roleRepository.GetManyAsync(x => allRoles.Contains(x.Id));
             if (roles.Any())
             {
                 if (roles.Any(x => x.RoleType == Domain.Enums.UserRoleType.Sup))
                 {
-                    return ApiResult<List<MenuRespVo>>.Ok(all);
+                    return ApiResult.Ok(all);
                 }
                 else
                 {
                     var roleids = roles.Select(x => x.Id).ToList();
                     var rolepermessions = await mySqlEfContext.RolePermission.Where(x => roleids.Contains(x.RoleId)).Select(x => x.PermissionId).ToListAsync();
                     var finalmenus = Common.BuildTree(new MenuRespVo() { Id = 0, Children = all }, rolepermessions.ToHashSet());
-                    return ApiResult<List<MenuRespVo>>.Ok(finalmenus.Children.ToList());
+                    return ApiResult.Ok(finalmenus.Children.ToList());
                 }
             }
             else
             {
-                return ApiResult<List<MenuRespVo>>.Ok(new List<MenuRespVo>());
+                return ApiResult.Ok(new List<MenuRespVo>());
             }
         }
 

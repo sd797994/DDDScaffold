@@ -34,19 +34,36 @@ namespace ApplicaionServiceInterface.Dtos.Bases
         /// 回调Data
         /// </summary>
         public object Data { get; set; }
-
-        public static ApiResult Ok(string message = null, int code = 0)
+        public static ApiResult Ok(object data)
         {
-            return new ApiResult(message ?? "操作成功", code);
+            return new ApiResult
+            {
+                Code = 0,
+                Message = "操作成功",
+                Data = data
+            };
         }
-
-        public static ApiResult Ok(object Data, string message = null, int code = 0)
+        public static ApiResult Ok(bool data)
         {
-            return new ApiResult(message ?? "操作成功", code, Data);
+            return new ApiResult
+            {
+                Code = 0,
+                Message = "操作成功",
+                Data = data
+            };
         }
         public static ApiResult Err(string message = null, int code = -1)
         {
             return new ApiResult(message ?? "出错了,请稍后再试", code);
+        }
+        public static ApiResult<T> Ok<T>(T data)
+        {
+            return new ApiResult<T>
+            {
+                Code = 0,
+                Data = data,
+                Message = "操作成功"
+            };
         }
     }
     /// <summary>
@@ -74,10 +91,6 @@ namespace ApplicaionServiceInterface.Dtos.Bases
             if (code != 0)
                 Code = code;
             this.Data = data;
-        }
-        public static ApiResult<T> Ok(T Data, string message = null, int code = 0)
-        {
-            return new ApiResult<T>(message ?? "操作成功", code, Data);
         }
     }
 }

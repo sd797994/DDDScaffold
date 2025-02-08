@@ -107,7 +107,7 @@ namespace Infrastructure
             // 如果当前节点或其子树包含目标节点，返回当前节点的副本
             if (isIncluded || newChildren.Count > 0)
             {
-                return root.CopyTo<MenuRespVo, MenuRespVo>();
+                return root.CopyTo<MenuRespVo>();
             }
             return null;
         }

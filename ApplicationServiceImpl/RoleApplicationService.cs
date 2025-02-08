@@ -50,7 +50,7 @@ namespace ApplicationService.ApplicationServiceImpl
                     }
                     if (needadd)
                     {
-                        var role = new Domain.Entities.Role();
+                        var role = new Role();
                         role.Name = input.Name;
                         role.Status = 1;
                         role.RoleType = input.RoleType;
@@ -60,7 +60,7 @@ namespace ApplicationService.ApplicationServiceImpl
                             input.MenuIds.ForEach(x => mySqlEfContext.RolePermission.Add(new Infrastructure.DataBase.PO.RolePermission() { RoleId = oprole.Id, PermissionId = x }));
                     }
                 });
-                return await Task.FromResult(ApiResult.Ok(true));
+                return ApiResult.Ok(true);
             }
             throw new ApplicationServiceException("没有传递有效的数据，无法进行记录增加/更新");
         }
@@ -88,7 +88,7 @@ namespace ApplicationService.ApplicationServiceImpl
             var optuser = await userRepository.GetManyAsync(x => lastuserid.Contains(x.Id));
             rolesPage.lists.ForEach(x =>
             {
-                var item = x.CopyTo<Role, RoleListReqVo>();
+                var item = x.CopyTo<RoleListReqVo>();
                 item.LastUpdateUserName = optuser.FirstOrDefault(y => y.Id == x.LastUpdateUserId)?.RealName;
                 if (item.RoleType == Domain.Enums.UserRoleType.Sup)
                 {
@@ -101,7 +101,7 @@ namespace ApplicationService.ApplicationServiceImpl
                 resultlist.Add(item);
             });
             var result = new PageQueryResonseBase<RoleListReqVo>(resultlist, rolesPage.total);
-            return ApiResult<PageQueryResonseBase<RoleListReqVo>>.Ok(result);
+            return ApiResult.Ok(result);
         }
         public async Task<ApiResult<List<RoleListReqVo>>> GetAllRole()
         {
@@ -126,7 +126,7 @@ namespace ApplicationService.ApplicationServiceImpl
                 }
                 resultlist.Add(item);
             });
-            return ApiResult<List<RoleListReqVo>>.Ok(resultlist);
+            return ApiResult.Ok(resultlist);
         }
         public async Task<ApiResult> BatchStatusRole(IdListStatusReqVo input)
         {

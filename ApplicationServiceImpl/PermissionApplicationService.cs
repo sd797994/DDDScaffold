@@ -45,7 +45,7 @@ namespace ApplicationServiceImpl
                     }
                     else
                     {
-                        var permission = input.CopyTo<EditPermissionReq, Permission>();
+                        var permission = input.CopyTo<Permission>();
                         permissionRepository.Add(permission);
                     }
                 });
@@ -75,7 +75,7 @@ namespace ApplicationServiceImpl
             foreach (var item in await permissionRepository.GetManyAsync(x => (input.ShowSystem == false ? x.ShowSystem == false : true)))
             {
                 if (input.Filters == null || input.Filters.Contains(item.Id))
-                    result.Add(item.CopyTo<Permission, MenuRespVo>());
+                    result.Add(item.CopyTo<MenuRespVo>());
             }
             //广度优先搜索
             //首先获取所有父级，写入哈希和队列以及结果集
@@ -111,13 +111,13 @@ namespace ApplicationServiceImpl
                 });
                 item.Children = allChilds.OrderByDescending(x => x.Sort).ToList();
             }
-            return ApiResult<List<MenuRespVo>>.Ok(resultvo.OrderByDescending(x => x.Sort).ToList());
+            return ApiResult.Ok(resultvo.OrderByDescending(x => x.Sort).ToList());
         }
         public async Task<ApiResult<PageQueryResonseBase<MenuRespVo>>> GetPermissionByPage(PageQueryInputBase input)
         {
             var all = (await GetAllPermission(null)).Data;
             var page = all.Skip(input.GetSkip()).Take(input.PageSize).ToList();
-            return ApiResult<PageQueryResonseBase<MenuRespVo>>.Ok(new PageQueryResonseBase<MenuRespVo>(page, all.Count));
+            return ApiResult.Ok(new PageQueryResonseBase<MenuRespVo>(page, all.Count));
         }
     }
 }

@@ -19,7 +19,7 @@ namespace Infrastructure.EfDataAccess
             t.CreateUserId = Common.GetCurrentUser().Id;
             t.LastUpdateDate = DateTime.Now;
             t.LastUpdateUserId = Common.GetCurrentUser().Id;
-            var po = t.CopyTo<DomainModel, PersistenceObject>();
+            var po = t.CopyTo<PersistenceObject>();
             context.Set<PersistenceObject>().Add(po);
             return po as DomainModel;
         }
@@ -28,7 +28,7 @@ namespace Infrastructure.EfDataAccess
         public virtual void Delete(DomainModel t)
         {
             t.IsDelete = true;
-            var po = t.CopyTo<DomainModel, PersistenceObject>();
+            var po = t.CopyTo<PersistenceObject>();
             po.LastUpdateDate = DateTime.Now;
             po.LastUpdateUserId = Common.GetCurrentUser().Id;
             context.Set<PersistenceObject>().Attach(po).State = EntityState.Deleted;
@@ -54,7 +54,7 @@ namespace Infrastructure.EfDataAccess
             if (po == null || po.IsDelete != isDeleted)
                 return default;
             context.Set<PersistenceObject>().Attach(po).State = EntityState.Detached;
-            return po.CopyTo<PersistenceObject, DomainModel>();
+            return po.CopyTo<DomainModel>();
         }
         public virtual async Task<DomainModel> GetAsync(Expression<Func<DomainModel, bool>> condition, bool isDeleted = false, List<SortedParams> sorteds = null)
         {
@@ -62,7 +62,7 @@ namespace Infrastructure.EfDataAccess
             if (po == null)
                 return default;
             context.Set<PersistenceObject>().Attach(po).State = EntityState.Detached;
-            return po.CopyTo<PersistenceObject, DomainModel>();
+            return po.CopyTo<DomainModel>();
         }
         public virtual async Task<List<DomainModel>> GetManyAsync(Expression<Func<DomainModel, bool>> condition, List<SortedParams> sorteds = null, bool isDeleted = false)
         {
@@ -74,19 +74,19 @@ namespace Infrastructure.EfDataAccess
             {
                 foreach (var po in poResult)
                 {
-                    dolist.Add(po.CopyTo<PersistenceObject, DomainModel>());
+                    dolist.Add(po.CopyTo<DomainModel>());
                 }
             }
             return dolist;
         }
         public virtual async Task<List<DomainModel>> GetManyToListAsync(int[] key, bool isDeleted = false)
         {
-            return await context.Set<PersistenceObject>().AsNoTracking().Where(x => x.IsDelete == isDeleted && key.ToList().Contains((x as Entity).Id)).Select(x => x.CopyTo<PersistenceObject, DomainModel>()).ToListAsync();
+            return await context.Set<PersistenceObject>().AsNoTracking().Where(x => x.IsDelete == isDeleted && key.ToList().Contains((x as Entity).Id)).Select(x => x.CopyTo<DomainModel>()).ToListAsync();
         }
 
         public virtual void Update(DomainModel t)
         {
-            var po = t.CopyTo<DomainModel, PersistenceObject>();
+            var po = t.CopyTo<PersistenceObject>();
             po.LastUpdateDate = DateTime.Now;
             po.LastUpdateUserId = Common.GetCurrentUser().Id;
             context.Set<PersistenceObject>().Attach(po).State = EntityState.Modified;
@@ -123,7 +123,7 @@ namespace Infrastructure.EfDataAccess
                 {
                     foreach (var po in poResult)
                     {
-                        dolist.Add(po.CopyTo<PersistenceObject, DomainModel>());
+                        dolist.Add(po.CopyTo<DomainModel>());
                     }
                 }
             }
