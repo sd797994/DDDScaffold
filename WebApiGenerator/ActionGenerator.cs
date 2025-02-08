@@ -187,7 +187,31 @@ public class ActionGenerator : IIncrementalGenerator
             var paramType = parameters.Length > 0 ? parameters[0].Type.ToDisplayString(FullyQualifiedWithoutGlobalFormat) : "";
             var paramName = parameters.Length > 0 ? parameters[0].Name : "";
             var returnType = methodSymbol.ReturnType.ToDisplayString(FullyQualifiedWithoutGlobalFormat);
-
+            var returnTypeSymbol = methodSymbol.ReturnType as INamedTypeSymbol;
+            bool isTask = returnTypeSymbol?.Name == "Task";
+            bool isNonGenericTask = isTask && (returnTypeSymbol?.IsGenericType ?? false) == false;
+            bool isGenericTask = isTask && (returnTypeSymbol?.IsGenericType ?? false);
+            string controllerReturnType;
+            string methodBody;
+            if (isNonGenericTask)
+            {
+                // 方法接口返回 Task，无具体返回值
+                // 控制器返回类型改为 Task<ApiResult>
+                controllerReturnType = "Task<ApiResult>";
+                methodBody = $"await service.{methodSymbol.Name}({paramName});\n            return ApiResult.Ok();";
+            }
+            else if (isGenericTask)
+            {
+                // 方法接口返回 Task<ApiResult<T>>
+                controllerReturnType = $"Task<ApiResult<{returnTypeSymbol.TypeArguments[0].ToDisplayString(FullyQualifiedWithoutGlobalFormat)}>>";
+                methodBody = $"return ApiResult.Ok(await service.{methodSymbol.Name}({paramName}));";
+            }
+            else
+            {
+                // 如果返回的既不是 Task 也不是 Task<T>，则直接按原样生成
+                controllerReturnType = returnType;
+                methodBody = $"return await service.{methodSymbol.Name}({paramName});";
+            }
             var getpost = "";
             if (!string.IsNullOrEmpty(paramType))
             {
@@ -218,9 +242,9 @@ public class ActionGenerator : IIncrementalGenerator
                     /// <returns></returns>
                     [Route("/api/{{name.ToLower()}}/{{routeName}}")]
                     {{reqTypeAttribute}}
-                    public async {{returnType}} {{methodSymbol.Name}}({{(string.IsNullOrWhiteSpace(paramName) ? "" : $"{getpost}{paramType} {paramName}")}})
+                    public async {{controllerReturnType}} {{methodSymbol.Name}}({{(string.IsNullOrWhiteSpace(paramName) ? "" : $"{getpost}{paramType} {paramName}")}})
                     {
-                        return await service.{{methodSymbol.Name}}({{paramName}});
+                        {{methodBody}}
                     }
             """;
 

@@ -20,7 +20,7 @@ namespace ApplicationServiceImpl
             this.unitofWork = unitofWork;
         }
 
-        public async Task<ApiResult> SavePermission(EditPermissionReq input)
+        public async Task SavePermission(EditPermissionReq input)
         {
             if (input != null)
             {
@@ -49,11 +49,11 @@ namespace ApplicationServiceImpl
                         permissionRepository.Add(permission);
                     }
                 });
-                return ApiResult.Ok(true);
+                return;
             }
             throw new ApplicationServiceException("没有传递有效的数据，无法进行记录增加/更新");
         }
-        public async Task<ApiResult> DeletePermission(DeleteModelReq input)
+        public async Task DeletePermission(DeleteModelReq input)
         {
             if (input != null && input.IdLists != null && input.IdLists.Any())
             {
@@ -62,9 +62,8 @@ namespace ApplicationServiceImpl
                     permissionRepository.Delete(x => input.IdLists.Contains(x.Id));
                 });
             }
-            return ApiResult.Ok(true);
         }
-        public async Task<ApiResult<List<MenuRespVo>>> GetAllPermission(MenuReqVo input)
+        public async Task<List<MenuRespVo>> GetAllPermission(MenuReqVo input)
         {
             var result = new List<MenuRespVo>();
             var resultvo = new List<MenuRespVo>();
@@ -111,13 +110,13 @@ namespace ApplicationServiceImpl
                 });
                 item.Children = allChilds.OrderByDescending(x => x.Sort).ToList();
             }
-            return ApiResult.Ok(resultvo.OrderByDescending(x => x.Sort).ToList());
+            return resultvo.OrderByDescending(x => x.Sort).ToList();
         }
-        public async Task<ApiResult<PageQueryResonseBase<MenuRespVo>>> GetPermissionByPage(PageQueryInputBase input)
+        public async Task<PageQueryResonseBase<MenuRespVo>> GetPermissionByPage(PageQueryInputBase input)
         {
-            var all = (await GetAllPermission(null)).Data;
+            var all = await GetAllPermission(null);
             var page = all.Skip(input.GetSkip()).Take(input.PageSize).ToList();
-            return ApiResult.Ok(new PageQueryResonseBase<MenuRespVo>(page, all.Count));
+            return new PageQueryResonseBase<MenuRespVo>(page, all.Count);
         }
     }
 }

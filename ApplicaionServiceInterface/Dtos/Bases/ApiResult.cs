@@ -43,6 +43,15 @@ namespace ApplicaionServiceInterface.Dtos.Bases
                 Data = data
             };
         }
+        public static ApiResult Ok()
+        {
+            return new ApiResult
+            {
+                Code = 0,
+                Message = "操作成功",
+                Data = true
+            };
+        }
         public static ApiResult Ok(bool data)
         {
             return new ApiResult

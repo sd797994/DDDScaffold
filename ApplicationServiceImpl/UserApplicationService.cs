@@ -28,7 +28,7 @@ namespace ApplicationService.ApplicationServiceImpl
             this.permissionApplicationService = permissionApplicationService;
             this.roleRepository = roleRepository;
         }
-        public async Task<ApiResult<LoginResp>> GetUserInfo(LoginReq input)
+        public async Task<LoginResp> GetUserInfo(LoginReq input)
         {
             var user = await userRepository.GetAsync(x => x.UserName == input.UserName && x.Password == Common.GetMD5SaltCode(input.Password) && x.Status == 1);
             if (user == null)
@@ -42,10 +42,10 @@ namespace ApplicationService.ApplicationServiceImpl
             var resp = user.CopyTo<LoginResp>();
             resp.Token = JwtService.GenerateToken(user.Id, user.UserName);
             resp.UserRoles = await mySqlEfContext.UserRole.Where(x => x.UserId == resp.Id).Select(x => x.RoleId).ToListAsync();
-            return ApiResult.Ok(resp);
+            return resp;
         }
 
-        public async Task<ApiResult> SaveUserInfo(EditUserReq input)
+        public async Task SaveUserInfo(EditUserReq input)
         {
             if (input != null)
             {
@@ -88,12 +88,12 @@ namespace ApplicationService.ApplicationServiceImpl
                         }
                     }
                 });
-                return ApiResult.Ok(true);
+                return;
             }
             throw new ApplicationServiceException("没有传递有效的数据，无法进行记录增加/更新");
         }
 
-        public async Task<ApiResult<GetUserResp>> UserInfo(GetModelReq input)
+        public async Task<GetUserResp> UserInfo(GetModelReq input)
         {
             if (input != null)
             {
@@ -105,13 +105,13 @@ namespace ApplicationService.ApplicationServiceImpl
                 if (user != null)
                 {
                     var userresp = user.CopyTo<GetUserResp>();
-                    return ApiResult.Ok(userresp);
+                    return userresp;
                 }
             }
             throw new ApplicationServiceException("没有查到对应的用户");
         }
 
-        public async Task<ApiResult> BatchStatusRole(IdListStatusReqVo input)
+        public async Task BatchStatusRole(IdListStatusReqVo input)
         {
             if (input != null && input.IdLists != null && input.IdLists.Any())
             {
@@ -120,9 +120,8 @@ namespace ApplicationService.ApplicationServiceImpl
                     userRepository.Update(x => input.IdLists.Contains(x.Id), x => x.Status, input.Status);
                 });
             }
-            return ApiResult.Ok(true);
         }
-        public async Task<ApiResult<PageQueryResonseBase<GetUserResp>>> GetAllUserByPage(PageQueryInputBase input)
+        public async Task<PageQueryResonseBase<GetUserResp>> GetAllUserByPage(PageQueryInputBase input)
         {
             var rolesPage = await userRepository.GetManyByPageAsync(x => true, input.GetSkip(), input.PageSize);
             var alluserid = rolesPage.lists.Select(x => x.Id).ToList();
@@ -138,42 +137,42 @@ namespace ApplicationService.ApplicationServiceImpl
                 userlist.Add(item);
             });
             var result = new PageQueryResonseBase<GetUserResp>(userlist, rolesPage.total);
-            return ApiResult.Ok(result);
+            return result;
         }
 
-        public async Task<ApiResult<List<MenuRespVo>>> GetRoleMenus(GetModelReq input)
+        public async Task<List<MenuRespVo>> GetRoleMenus(GetModelReq input)
         {
             if (input.Id == 0)
             {
                 input.Id = Common.GetCurrentUser().Id;//传0修改自己
             }
             var user = await userRepository.GetAsync(input.Id);
-            var all = (await permissionApplicationService.GetAllPermission(new MenuReqVo() { FlatMenu = false, ShowSystem = true })).Data;
+            var all = await permissionApplicationService.GetAllPermission(new MenuReqVo() { FlatMenu = false, ShowSystem = true });
             if (user.RoleType == Domain.Enums.UserRoleType.Sup)
-                return ApiResult.Ok(all);
+                return all;
             var allRoles = await mySqlEfContext.UserRole.Where(x => x.UserId == input.Id).Select(x => x.RoleId).ToListAsync();
             var roles = await roleRepository.GetManyAsync(x => allRoles.Contains(x.Id));
             if (roles.Any())
             {
                 if (roles.Any(x => x.RoleType == Domain.Enums.UserRoleType.Sup))
                 {
-                    return ApiResult.Ok(all);
+                    return all;
                 }
                 else
                 {
                     var roleids = roles.Select(x => x.Id).ToList();
                     var rolepermessions = await mySqlEfContext.RolePermission.Where(x => roleids.Contains(x.RoleId)).Select(x => x.PermissionId).ToListAsync();
                     var finalmenus = Common.BuildTree(new MenuRespVo() { Id = 0, Children = all }, rolepermessions.ToHashSet());
-                    return ApiResult.Ok(finalmenus.Children.ToList());
+                    return finalmenus.Children.ToList();
                 }
             }
             else
             {
-                return ApiResult.Ok(new List<MenuRespVo>());
+                return new List<MenuRespVo>();
             }
         }
 
-        public async Task<ApiResult> DeleteUser(DeleteModelReq input)
+        public async Task DeleteUser(DeleteModelReq input)
         {
             if (input != null && input.IdLists != null && input.IdLists.Any())
             {
@@ -182,7 +181,6 @@ namespace ApplicationService.ApplicationServiceImpl
                     userRepository.Delete(x => input.IdLists.Contains(x.Id));
                 });
             }
-            return ApiResult.Ok(true);
         }
     }
 }
