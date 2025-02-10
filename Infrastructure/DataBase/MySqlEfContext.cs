@@ -26,7 +26,16 @@ namespace Infrastructure.DataBase
         public DbSet<RolePermission> RolePermission { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-
+            if (!optionsBuilder.IsConfigured)
+            {
+                var basePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "WebApi");
+                var configuration = new ConfigurationBuilder()
+                    .SetBasePath(basePath)
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                    .Build();
+                var connectionString = configuration.GetSection("SqlConnectionString").Value;
+                optionsBuilder.UseMySql(connectionString, new MySqlServerVersion(new Version(5, 7, 0)));
+            }
         }
         public override int SaveChanges()
         {
