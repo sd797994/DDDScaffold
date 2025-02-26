@@ -225,8 +225,18 @@ namespace InfrastructureBase.Object
                 if (targetItem.PropertyType != sourceItem.PropertyType)
                     continue;
 
+                // 构造判断： EqualityComparer<T>.Default.Equals(target.Property, default(T))
+                var equalityComparerType = typeof(EqualityComparer<>).MakeGenericType(targetItem.PropertyType);
+                var defaultComparer = Property(null, equalityComparerType, "Default");
+                var equalsMethod = equalityComparerType.GetMethod("Equals", new[] { targetItem.PropertyType, targetItem.PropertyType });
+                var defaultValue = Default(targetItem.PropertyType);
+                var checkDefault = Call(defaultComparer, equalsMethod, targetProperty, defaultValue);
 
-                expressions.Add(Assign(targetProperty, sourceProperty));
+                // 如果判断成立，则赋值 target.Property = source.Property
+                var assignExpr = Assign(targetProperty, sourceProperty);
+                var ifThenExpr = IfThen(checkDefault, assignExpr);
+
+                expressions.Add(ifThenExpr);
             }
 
             //当Target!=null判断source是否为空
