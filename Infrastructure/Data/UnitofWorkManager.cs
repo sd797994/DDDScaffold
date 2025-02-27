@@ -13,7 +13,7 @@ namespace Infrastructure.EfDataAccess
         {
             await context.SaveChangesAsync();
         }
-        public async Task ExecuteTransactionAsync(Func<Task> dbFunc)
+        public async Task ExecuteTransaction(Func<Task> dbFunc)
         {
             using var tran = await context.Database.BeginTransactionAsync();
             try

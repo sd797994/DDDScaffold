@@ -2,6 +2,7 @@
 using InfrastructureBase;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System.ComponentModel.Design;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;

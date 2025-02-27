@@ -24,7 +24,7 @@ namespace ApplicationServiceImpl
         {
             if (input != null)
             {
-                await unitofWork.ExecuteTransactionAsync(async () =>
+                await unitofWork.ExecuteTransaction(async () =>
                 {
                     if (input.Id != 0)
                     {

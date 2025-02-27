@@ -53,7 +53,7 @@ namespace ApplicationService.ApplicationServiceImpl
                 {
                     input.Id = Common.GetCurrentUser().Id;//传0修改自己
                 }
-                await unitofWork.ExecuteTransactionAsync(async () =>
+                await unitofWork.ExecuteTransaction(async () =>
                 {
                     User user;
                     if (input.Id != null && input.Id != 0)

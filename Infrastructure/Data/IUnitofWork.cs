@@ -2,7 +2,7 @@
 {
     public interface IUnitofWork
     {
-        Task ExecuteTransactionAsync(Func<Task> func);
+        Task ExecuteTransaction(Func<Task> func);
         Task CommitAsync();
         Task ExecuteTransaction(Action dbFunc);
     }

@@ -133,7 +133,7 @@ namespace WebApi.Controllers
                                 {
                                     throw new ApplicationServiceException("没有传递有效的数据，无法进行记录增加/更新");
                                 }
-                                await unitofWork.ExecuteTransactionAsync(async () => {
+                                await unitofWork.ExecuteTransaction(async () => {
                                     if (input.Id != 0)
                                     {
                                         var _stypename_ = await _stypename_Repository.GetAsync(input.Id);

@@ -30,7 +30,7 @@ namespace ApplicationService.ApplicationServiceImpl
         {
             if (input != null)
             {
-                await unitofWork.ExecuteTransactionAsync(async () =>
+                await unitofWork.ExecuteTransaction(async () =>
                 {
                     var needadd = true;
                     if (input.Id != null && input.Id != 0)
@@ -69,7 +69,7 @@ namespace ApplicationService.ApplicationServiceImpl
         {
             if (input != null && input.IdLists != null && input.IdLists.Any())
             {
-                await unitofWork.ExecuteTransactionAsync(async () =>
+                await unitofWork.ExecuteTransaction(async () =>
                 {
                     roleRepository.Delete(x => input.IdLists.Contains(x.Id));
                     await mySqlEfContext.RolePermission.Where(x => input.IdLists.Contains(x.RoleId)).ExecuteDeleteAsync();
