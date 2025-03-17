@@ -1,10 +1,17 @@
 ﻿using DomainBase;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis.CSharp.Formatting;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.IO.Compression;
 using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
+using Microsoft.CodeAnalysis.Formatting;
+using System.Runtime.Serialization;
 
 namespace WebApi.Controllers
 {
@@ -33,8 +40,8 @@ namespace WebApi.Controllers
             { typeof(ulong), "ulong" },
             { typeof(void), "void" }
         };
-        [HttpGet("/api/codebuilder")]
-        public IActionResult CodeBuilder(string name, string desc)
+        [HttpPost("/api/codebuilder")]
+        public IActionResult CodeBuilder(string name, string desc, List<CodeBuilderFuncType> funcTypes)
         {
             //从domain获取所有的类型
             var entityType = typeof(Domain.Entities.User).Assembly.GetTypes().FirstOrDefault(x => x.BaseType == typeof(Entity) && x.Name.ToLower().Contains(name.ToLower()));
@@ -67,7 +74,7 @@ namespace WebApi.Controllers
                     }
                     """;
                 code2 = code2.Replace("_typename_", entityType.Name);
-                var code3 = """
+                var code3 = $$"""
                     using ApplicaionServiceInterface.Dtos.Bases;
                     using ApplicaionServiceInterface.Dtos.Requests;
                     using ApplicaionServiceInterface.Dtos.Responses;
@@ -80,19 +87,15 @@ namespace WebApi.Controllers
                         [ActionGenerator("_desc_管理")]
                         public interface I_typename_ApplicationService
                         {
-                            [ActionGeneratorMethod(RequestType.GET, "获取_desc_", "getinfo", true)]
-                            Task<Get_typename_Resp> Get_typename_Info(GetModelReq input);
-                            [ActionGeneratorMethod(RequestType.Post,"保存_desc_", "edit", true)]
-                            Task Save_typename_(Edit_typename_Req input);
-                            [ActionGeneratorMethod(RequestType.GET, "获取_desc_分页", "page", true)]
-                            Task<PageQueryResonseBase<Get_typename_Resp>> Get_typename_ByPage(PageQueryInputBase input);
-                            [ActionGeneratorMethod(RequestType.Post, "删除_desc_", "delete", true)]
-                            Task Delete_typename_(DeleteModelReq input);
+                            {{(funcTypes.Contains(CodeBuilderFuncType.Get) ? FunctionInfoBuilder.GetInfo(CodeBuilderFuncType.Get).InterfaceCode : "")}}
+                            {{(funcTypes.Contains(CodeBuilderFuncType.Edit) ? FunctionInfoBuilder.GetInfo(CodeBuilderFuncType.Edit).InterfaceCode : "")}}
+                            {{(funcTypes.Contains(CodeBuilderFuncType.GetByPage) ? FunctionInfoBuilder.GetInfo(CodeBuilderFuncType.GetByPage).InterfaceCode : "")}}
+                            {{(funcTypes.Contains(CodeBuilderFuncType.Delete) ? FunctionInfoBuilder.GetInfo(CodeBuilderFuncType.Delete).InterfaceCode : "")}}
                         }
                     }
                     """;
                 code3 = code3.Replace("_typename_", entityType.Name).Replace("_desc_", desc);
-                var code4 = """
+                var code4 = $$"""
                     using ApplicaionServiceInterface.Dtos.Bases;
                     using ApplicaionServiceInterface.Dtos.Requests;
                     using ApplicaionServiceInterface.Dtos.Responses;
@@ -114,65 +117,15 @@ namespace WebApi.Controllers
                                 this._stypename_Repository = _stypename_Repository;
                                 this.unitofWork = unitofWork;
                             }
-                            public async Task<Get_typename_Resp> Get_typename_Info(GetModelReq input)
-                            {
-                                if (input != null && input.Id != 0)
-                                {
-                                    var _stypename_ = await _stypename_Repository.GetAsync(input.Id);
-                                    if (_stypename_ != null)
-                                    {
-                                        return _stypename_.CopyTo<Get_typename_Resp>();
-                                    }
-                                }
-                                throw new ApplicationServiceException("没有找到对应的记录,请确定id是否正确");
-                            }
-
-                            public async Task Save_typename_(Edit_typename_Req input)
-                            {
-                                if (input == null)
-                                {
-                                    throw new ApplicationServiceException("没有传递有效的数据，无法进行记录增加/更新");
-                                }
-                                await unitofWork.ExecuteTransaction(async () => {
-                                    if (input.Id != 0)
-                                    {
-                                        var _stypename_ = await _stypename_Repository.GetAsync(input.Id);
-                                        if (_stypename_ != null)
-                                        {
-                                            //按照实际情况更新信息
-                        _stypenameset_
-                                            _stypename_Repository.Update(_stypename_);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        var _stypename_ = input.CopyTo<_typename_>();
-                                        _stypename_Repository.Add(_stypename_);
-                                    }
-                                });
-                            }
-
-                            public async Task<PageQueryResonseBase<Get_typename_Resp>> Get_typename_ByPage(PageQueryInputBase input)
-                            {
-                                var page = await _stypename_Repository.GetManyByPageAsync(x => true, input.GetSkip(), input.PageSize);
-                                var response = new PageQueryResonseBase<Get_typename_Resp>(page.lists.Select(x => x.CopyTo<Get_typename_Resp>()).ToList(), page.total);
-                                return response;
-                            }
-
-                            public async Task Delete_typename_(DeleteModelReq input)
-                            {
-                                if (input != null && input.IdLists != null && input.IdLists.Any())
-                                {
-                                    await unitofWork.ExecuteTransaction(() => {
-                                      _stypename_Repository.Delete(x => input.IdLists.Contains(x.Id));
-                                    });
-                                }
-                            }
+                            {{(funcTypes.Contains(CodeBuilderFuncType.Get) ? FunctionInfoBuilder.GetInfo(CodeBuilderFuncType.Get).ServiceCode : "")}}
+                            {{(funcTypes.Contains(CodeBuilderFuncType.Edit) ? FunctionInfoBuilder.GetInfo(CodeBuilderFuncType.Edit).ServiceCode : "")}}
+                            {{(funcTypes.Contains(CodeBuilderFuncType.GetByPage) ? FunctionInfoBuilder.GetInfo(CodeBuilderFuncType.GetByPage).ServiceCode : "")}}
+                            {{(funcTypes.Contains(CodeBuilderFuncType.Delete) ? FunctionInfoBuilder.GetInfo(CodeBuilderFuncType.Delete).ServiceCode : "")}}
                         }
                     }
                     """;
                 var setprops = Setprops(entityType);
-                code4 = code4.Replace("_typename_", entityType.Name).Replace("_stypenameset_", setprops).Replace("_stypename_", entityType.Name.ToLower());
+                code4 = code4.Replace("_typename_", entityType.Name).Replace("_stypenameset_", setprops).Replace("_stypename_", entityType.Name.ToLower()).Replace("_desc_", desc);
                 var code5 = """
                     using Domain.Enums;
                     namespace ApplicaionServiceInterface.Dtos.Responses
@@ -231,15 +184,17 @@ namespace WebApi.Controllers
                     CreateFile(Path.Combine(folders[5], $"{entityType.Name}Repository.cs"), code2);
                     CreateFile(Path.Combine(folders[1], $"I{entityType.Name}ApplicationService.cs"), code3);
                     CreateFile(Path.Combine(folders[0], $"{entityType.Name}ApplicationService.cs"), code4);
-                    CreateFile(Path.Combine(folders[3], $"Get{entityType.Name}Resp.cs"), code5);
-                    CreateFile(Path.Combine(folders[2], $"Edit{entityType.Name}Req.cs"), code6);
+                    if (funcTypes.Contains(CodeBuilderFuncType.Get) || funcTypes.Contains(CodeBuilderFuncType.GetByPage))
+                        CreateFile(Path.Combine(folders[3], $"Get{entityType.Name}Resp.cs"), code5);
+                    if (funcTypes.Contains(CodeBuilderFuncType.Edit))
+                        CreateFile(Path.Combine(folders[2], $"Edit{entityType.Name}Req.cs"), code6);
                     CreateFile(Path.Combine(folders[6], $"{entityType.Name}.cs"), code7);
                     void CreateFile(string fullpath, string content)
                     {
                         ZipArchiveEntry fileEntry = zip.CreateEntry(fullpath);
                         using (StreamWriter writer = new StreamWriter(fileEntry.Open()))
                         {
-                            writer.Write(content);
+                            writer.Write(FormatCsharpCode(content));
                         }
                     }
                 }
@@ -343,5 +298,142 @@ namespace WebApi.Controllers
             }
             throw new InfrastructureBase.ApplicationServiceException("未能找到实体");
         }
+        static string FormatCsharpCode(string sourceCode)
+        {
+            // 1. 解析源码为语法树
+            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode,
+                new CSharpParseOptions(LanguageVersion.Preview)); // LanguageVersion可视情况修改
+            var root = syntaxTree.GetRoot() as CompilationUnitSyntax;
+
+            // 2. 创建一个临时的 Workspace（无需真实项目）
+            using var workspace = new AdhocWorkspace();
+
+            // 3. 准备选项（可细化，也可用默认）
+            var options = workspace.Options
+                .WithChangedOption(CSharpFormattingOptions.NewLinesForBracesInMethods, true)
+                .WithChangedOption(CSharpFormattingOptions.NewLinesForBracesInTypes, true);
+            // .WithChangedOption(...) 根据需要定制更多
+
+            // 4. 调用 Roslyn 的 Formatter
+            var formatted = Microsoft.CodeAnalysis.Formatting.Formatter.Format(root, workspace);
+            var normalized = formatted.NormalizeWhitespace(elasticTrivia: true);
+            // 5. 拿到重新排版的源码
+            return normalized.ToFullString();
+        }
+    }
+    public enum CodeBuilderFuncType
+    {
+        Get = 1,
+        Edit = 2,
+        GetByPage = 3,
+        Delete = 4,
+    }
+    public class FunctionInfo
+    {
+        public string InterfaceCode { get; set; }
+        public string ServiceCode { get; set; }
+    }
+
+    public class FunctionInfoBuilder
+    {
+        static Dictionary<CodeBuilderFuncType, FunctionInfo> functionInfos = new Dictionary<CodeBuilderFuncType, FunctionInfo>();
+        static FunctionInfoBuilder()
+        {
+            functionInfos.Add(CodeBuilderFuncType.Get, new FunctionInfo()
+            {
+                InterfaceCode = """
+                [ActionGeneratorMethod(RequestType.GET, \"获取_desc_\", \"getinfo\", true)]
+                Task<Get_typename_Resp> Get_typename_Info(GetModelReq input);
+                """,
+                ServiceCode = """
+                public async Task<Get_typename_Resp> Get_typename_Info(GetModelReq input)
+                {
+                    if (input != null && input.Id != 0)
+                    {
+                        var _stypename_ = await _stypename_Repository.GetAsync(input.Id);
+                        if (_stypename_ != null)
+                        {
+                            return _stypename_.CopyTo<Get_typename_Resp>();
+                        }
+                    }
+                    throw new ApplicationServiceException("没有找到对应的_desc_记录");
+                }
+                """
+            });
+            functionInfos.Add(CodeBuilderFuncType.Edit, new FunctionInfo()
+            {
+                InterfaceCode = """
+                [ActionGeneratorMethod(RequestType.Post,"保存_desc_", "edit", true)]
+                Task Save_typename_(Edit_typename_Req input);
+                """,
+                ServiceCode = """
+                public async Task Save_typename_(Edit_typename_Req input)
+                {
+                    if (input == null)
+                    {
+                        throw new ApplicationServiceException("输入不能为空!");
+                    }
+                    await unitofWork.ExecuteTransaction(async () => {
+                        if (input.Id != 0)
+                        {
+                            var _stypename_ = await _stypename_Repository.GetAsync(input.Id);
+                            if (_stypename_ != null)
+                            {
+                                _stypename_ = input.CopyTo(_stypename_);
+                                _stypename_Repository.Update(_stypename_);
+                            }
+                            else
+                            {
+                                throw new ApplicationServiceException("没有找到对应的_desc_记录");
+                            }
+                        }
+                        else
+                        {
+                            var _stypename_ = input.CopyTo<_typename_>();
+                            _stypename_ = _stypename_Repository.Add(_stypename_);
+                        }
+                    });
+                }
+                """
+            });
+            functionInfos.Add(CodeBuilderFuncType.GetByPage, new FunctionInfo()
+            {
+                InterfaceCode = """
+                [ActionGeneratorMethod(RequestType.GET, "获取_desc_分页", "page", true)]
+                Task<PageQueryResonseBase<Get_typename_Resp>> Get_typename_ByPage(PageQueryInputBase input);
+                """,
+                ServiceCode = """
+                public async Task<PageQueryResonseBase<Get_typename_Resp>> Get_typename_ByPage(PageQueryInputBase input)
+                {
+                    var page = await _stypename_Repository.GetManyByPageAsync(x => true, input.GetSkip(), input.PageSize);
+                    var response = new PageQueryResonseBase<Get_typename_Resp>(page.lists.Select(x => x.CopyTo<Get_typename_Resp>()).ToList(), page.total);
+                    return response;
+                }
+                """
+            });
+            functionInfos.Add(CodeBuilderFuncType.Delete, new FunctionInfo()
+            {
+                InterfaceCode = """
+                [ActionGeneratorMethod(RequestType.Post, "删除_desc_", "delete", true)]
+                Task Delete_typename_(DeleteModelReq input);
+                """,
+                ServiceCode = """
+                public async Task Delete_typename_(DeleteModelReq input)
+                {
+                    if (input != null && input.IdLists != null && input.IdLists.Any())
+                    {
+                        await unitofWork.ExecuteTransaction(() => {
+                          _stypename_Repository.Delete(x => input.IdLists.Contains(x.Id));
+                        });
+                    }
+                }
+                """
+            });
+        }
+        public static FunctionInfo GetInfo(CodeBuilderFuncType type)
+        {
+            return functionInfos[type];
+        }
+
     }
 }
