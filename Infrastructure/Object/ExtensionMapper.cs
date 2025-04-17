@@ -84,7 +84,8 @@ namespace InfrastructureBase.Object
                 {
                     if (targetItem.PropertyType.IsGenericType && targetItem.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && !sourceItem.PropertyType.IsGenericType)
                     {
-                        memberBindings.Add(Bind(targetItem, sourceProperty));
+                        var converted = Convert(sourceProperty, targetItem.PropertyType);
+                        memberBindings.Add(Bind(targetItem, converted));
                     }
                     else if (sourceItem.PropertyType.IsGenericType && sourceItem.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && !targetItem.PropertyType.IsGenericType)
                     {
@@ -225,18 +226,7 @@ namespace InfrastructureBase.Object
                 if (targetItem.PropertyType != sourceItem.PropertyType)
                     continue;
 
-                // 构造判断： EqualityComparer<T>.Default.Equals(target.Property, default(T))
-                var equalityComparerType = typeof(EqualityComparer<>).MakeGenericType(targetItem.PropertyType);
-                var defaultComparer = Property(null, equalityComparerType, "Default");
-                var equalsMethod = equalityComparerType.GetMethod("Equals", new[] { targetItem.PropertyType, targetItem.PropertyType });
-                var defaultValue = Default(targetItem.PropertyType);
-                var checkDefault = Call(defaultComparer, equalsMethod, targetProperty, defaultValue);
-
-                // 如果判断成立，则赋值 target.Property = source.Property
-                var assignExpr = Assign(targetProperty, sourceProperty);
-                var ifThenExpr = IfThen(checkDefault, assignExpr);
-
-                expressions.Add(ifThenExpr);
+                expressions.Add(Assign(targetProperty, sourceProperty));
             }
 
             //当Target!=null判断source是否为空
