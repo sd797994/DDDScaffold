@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 using System.Reflection;
 using static System.Linq.Expressions.Expression;
@@ -75,10 +76,40 @@ namespace InfrastructureBase.Object
                 //当两者是枚举 - 值类型关系时
                 if ((sourceItem.PropertyType.IsValueType && targetItem.PropertyType.IsEnum) || (targetItem.PropertyType.IsValueType && sourceItem.PropertyType.IsEnum))
                 {
-                    var expression = Convert(sourceProperty, targetItem.PropertyType);
-                    memberBindings.Add(Bind(targetItem, expression));
-                    continue;
+                    var srcType = sourceItem.PropertyType;
+                    var tgtType = targetItem.PropertyType;
+                    var srcEnum = Nullable.GetUnderlyingType(srcType) ?? srcType;
+                    var tgtEnum = Nullable.GetUnderlyingType(tgtType) ?? tgtType;
+                    if (srcEnum.IsEnum || tgtEnum.IsEnum)
+                    {
+                        Expression expr;
+                        if (Nullable.GetUnderlyingType(srcType) != null)
+                        {
+                            var hasValue = Property(sourceProperty, nameof(Nullable<int>.HasValue));
+                            var value = Property(sourceProperty, nameof(Nullable<int>.Value));
+                            var converted = Convert(value, tgtType);
 
+                            Expression defaultValue = Nullable.GetUnderlyingType(tgtType) != null
+                                ? Constant(null, tgtType)
+                                : Default(tgtType);
+
+                            expr = Condition(
+                                hasValue,
+                                converted,
+                                defaultValue
+                            );
+                        }
+                        else if (Nullable.GetUnderlyingType(tgtType) != null)
+                        {
+                            expr = Convert(sourceProperty, tgtType);
+                        }
+                        else
+                        {
+                            expr = Convert(sourceProperty, tgtType);
+                        }
+                        memberBindings.Add(Bind(targetItem, expr));
+                        continue;
+                    }
                 }
                 else if (targetItem.PropertyType != sourceItem.PropertyType)
                 {
@@ -174,73 +205,123 @@ namespace InfrastructureBase.Object
         {
             var sourceType = typeof(TSource);
             var targetType = typeof(TTarget);
-            //Func委托传入变量
-            var sourceParameter = Parameter(sourceType, "p");
 
-            var targetParameter = Parameter(targetType, "t");
+            var sourceParam = Parameter(sourceType, "p");   // source
+            var targetParam = Parameter(targetType, "t");   // target
 
-            //创建一个表达式集合
-            var expressions = new List<Expression>();
+            var assigns = new List<Expression>();
 
-            var targetTypes = targetType.GetProperties().Where(x => x.PropertyType.IsPublic && x.CanWrite);
-            foreach (var targetItem in targetTypes)
+            var targetProps = targetType.GetProperties()
+                                        .Where(x => x.CanWrite && x.PropertyType.IsPublic);
+
+            foreach (var tp in targetProps)
             {
-                var sourceItem = sourceType.GetProperty(targetItem.Name);
+                var sp = sourceType.GetProperty(tp.Name);
+                if (sp == null || !sp.CanRead || sp.PropertyType.IsNotPublic) continue;
 
-                //判断实体的读写权限
-                if (sourceItem == null || !sourceItem.CanRead || sourceItem.PropertyType.IsNotPublic)
-                    continue;
-
-                ////标注NotMapped特性的属性忽略转换
-                //if (sourceItem.GetCustomAttribute<NotMappedAttribute>() != null)
-                //    continue;
-
-                var sourceProperty = Property(sourceParameter, sourceItem);
-                var targetProperty = Property(targetParameter, targetItem);
-
-                //当非值类型且类型不相同时
-                if (!sourceItem.PropertyType.IsValueType && sourceItem.PropertyType != targetItem.PropertyType)
+                var srcExpr = Property(sourceParam, sp);
+                var tgtExpr = Property(targetParam, tp);
+                if (!sp.PropertyType.IsValueType && sp.PropertyType != tp.PropertyType)
                 {
-                    if (sourceItem.PropertyType == typeof(string) || targetItem.PropertyType == typeof(string))
+                    if (sp.PropertyType == typeof(string) || tp.PropertyType == typeof(string))
+                        continue;
+
+                    if (sp.PropertyType.IsClass && tp.PropertyType.IsClass &&
+                        !sp.PropertyType.IsGenericType && !tp.PropertyType.IsGenericType)
                     {
+                        var expr = GetClassExpression(srcExpr, sp.PropertyType, tp.PropertyType);
+                        assigns.Add(Assign(tgtExpr, expr));
                         continue;
                     }
-                    //判断都是(非泛型)class
-                    if (sourceItem.PropertyType.IsClass && targetItem.PropertyType.IsClass &&
-                        !sourceItem.PropertyType.IsGenericType && !targetItem.PropertyType.IsGenericType)
+                    if (typeof(IEnumerable).IsAssignableFrom(sp.PropertyType) &&
+                        typeof(IEnumerable).IsAssignableFrom(tp.PropertyType))
                     {
-                        var expression = GetClassExpression(sourceProperty, sourceItem.PropertyType, targetItem.PropertyType);
-                        expressions.Add(Assign(targetProperty, expression));
+                        var expr = GetListExpression(srcExpr, sp.PropertyType, tp.PropertyType);
+                        assigns.Add(Assign(tgtExpr, expr));
+                        continue;
                     }
-
-                    //集合数组类型的转换
-                    if (typeof(IEnumerable).IsAssignableFrom(sourceItem.PropertyType) && typeof(IEnumerable).IsAssignableFrom(targetItem.PropertyType))
+                }
+                if ((sp.PropertyType.IsEnum && tp.PropertyType.IsValueType) ||
+                    (tp.PropertyType.IsEnum && sp.PropertyType.IsValueType))
+                {
+                    var srcType = sp.PropertyType;
+                    var tgtType = tp.PropertyType;
+                    var srcEnum = Nullable.GetUnderlyingType(srcType) ?? srcType;
+                    var tgtEnum = Nullable.GetUnderlyingType(tgtType) ?? tgtType;
+                    if (srcEnum.IsEnum || tgtEnum.IsEnum)
                     {
-                        var expression = GetListExpression(sourceProperty, sourceItem.PropertyType, targetItem.PropertyType);
-                        expressions.Add(Assign(targetProperty, expression));
+                        Expression expr;
+                        if (Nullable.GetUnderlyingType(srcType) != null)
+                        {
+                            var hasValue = Property(srcExpr, nameof(Nullable<int>.HasValue));
+                            var value = Property(srcExpr, nameof(Nullable<int>.Value));
+                            var converted = Convert(value, tgtType);
+
+                            Expression defaultValue = Nullable.GetUnderlyingType(tgtType) != null
+                                ? Constant(null, tgtType)
+                                : Default(tgtType);
+
+                            expr = Condition(
+                                hasValue,
+                                converted,
+                                defaultValue
+                            );
+                            assigns.Add(Assign(tgtExpr, expr));
+                            continue;
+                        }
+                        else if (Nullable.GetUnderlyingType(tgtType) != null)
+                        {
+                            expr = Convert(srcExpr, tgtType);
+                        }
+                        else
+                        {
+                            expr = Convert(srcExpr, tgtType);
+                        }
+                        assigns.Add(Assign(tgtExpr, expr));
+                        continue;
+                    }
+                }
+
+                if (tp.PropertyType != sp.PropertyType)
+                {
+                    if (tp.PropertyType.IsGenericType &&
+                        tp.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&
+                        !sp.PropertyType.IsGenericType)
+                    {
+                        var converted = Convert(srcExpr, tp.PropertyType);
+                        assigns.Add(Assign(tgtExpr, converted));
+                        continue;
+                    }
+                    if (sp.PropertyType.IsGenericType &&
+                        sp.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&
+                        !tp.PropertyType.IsGenericType)
+                    {
+                        var method = ConvertMethodDir.GetConvertMethod(sp.PropertyType);
+                        var converted = Convert(srcExpr, tp.PropertyType, method);
+                        assigns.Add(Assign(tgtExpr, converted));
+                        continue;
                     }
 
                     continue;
                 }
 
-                if (targetItem.PropertyType != sourceItem.PropertyType)
-                    continue;
-
-                expressions.Add(Assign(targetProperty, sourceProperty));
+                assigns.Add(Assign(tgtExpr, srcExpr));
             }
 
-            //当Target!=null判断source是否为空
-            var testSource = NotEqual(sourceParameter, Constant(null, sourceType));
-            var ifTrueSource = Block(expressions);
-            var conditionSource = IfThen(testSource, ifTrueSource);
+            var guardSource = IfThen(
+                NotEqual(sourceParam, Constant(null, sourceType)),
+                Block(assigns));
 
-            //判断target是否为空
-            var testTarget = NotEqual(targetParameter, Constant(null, targetType));
-            var conditionTarget = IfThen(testTarget, conditionSource);
+            var guardTarget = IfThen(
+                NotEqual(targetParam, Constant(null, targetType)),
+                guardSource);
 
-            var lambda = Lambda<Action<TSource, TTarget>>(conditionTarget, sourceParameter, targetParameter);
+            var lambda = Lambda<Action<TSource, TTarget>>(
+                            guardTarget, sourceParam, targetParam);
+
             return lambda.Compile();
         }
+
     }
     public static class ConvertMethodDir
     {
