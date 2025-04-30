@@ -97,10 +97,7 @@ namespace InfrastructureBase.Object
                         }
                         else
                         {
-                            var defaultEnumValue = Activator.CreateInstance(
-                                Nullable.GetUnderlyingType(sourceItem.PropertyType) ?? sourceItem.PropertyType
-                            );
-                            falseBranch = Constant(defaultEnumValue, targetItem.PropertyType);
+                            falseBranch = Default(targetItem.PropertyType);
                         }
                         var enumConvertExpr = Condition(
                             hasValue,
@@ -279,10 +276,7 @@ namespace InfrastructureBase.Object
                         }
                         else
                         {
-                            var defaultEnumValue = Activator.CreateInstance(
-                                Nullable.GetUnderlyingType(sp.PropertyType) ?? sp.PropertyType
-                            );
-                            falseBranch = Constant(defaultEnumValue, tp.PropertyType);
+                            falseBranch = Default(tp.PropertyType);
                         }
                         var enumConvertExpr = Condition(
                             hasValue,
