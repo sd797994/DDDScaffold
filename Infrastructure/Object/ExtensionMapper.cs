@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 using System.Reflection;
 using static System.Linq.Expressions.Expression;
@@ -73,61 +72,71 @@ namespace InfrastructureBase.Object
                     }
                     continue;
                 }
-                // 1. 定义原类型/目标类型
-                var srcType = sourceItem.PropertyType;
-                var tgtType = targetItem.PropertyType;
-                // 2. 找到底层枚举类型（如果不是 Nullable，则就是自己）
-                var srcEnum = Nullable.GetUnderlyingType(srcType) ?? srcType;
-                var tgtEnum = Nullable.GetUnderlyingType(tgtType) ?? tgtType;
-                // 3. 只要任一侧是枚举，就走这里
-                if (srcEnum.IsEnum || tgtEnum.IsEnum)
+                //当两者是枚举 - 值类型关系时
+                var srcUnderlying = Nullable.GetUnderlyingType(sourceItem.PropertyType);
+                var tgtUnderlying = Nullable.GetUnderlyingType(targetItem.PropertyType);
+                bool srcIsNullableEnum = srcUnderlying != null && srcUnderlying.IsEnum;
+                bool tgtIsNullableEnum = tgtUnderlying != null && tgtUnderlying.IsEnum;
+                bool srcIsEnum = sourceItem.PropertyType.IsEnum;
+                bool tgtIsEnum = targetItem.PropertyType.IsEnum;
+
+                if (srcIsNullableEnum || tgtIsEnum || tgtIsNullableEnum || srcIsEnum)
                 {
-                    Expression expr;
-                    // 3.1 源是 Nullable<Enum>：要先检查 HasValue
-                    if (Nullable.GetUnderlyingType(srcType) != null)
+                    if (srcIsNullableEnum || srcUnderlying != null)
                     {
-                        var hasValue = Property(sourceProperty, nameof(Nullable<int>.HasValue));
-                        var value = Property(sourceProperty, nameof(Nullable<int>.Value));
-                        var converted = Convert(value, tgtType);
-                        // false 分支：目标如果也可空，就 null，否则 default(T)
-                        Expression defaultValue = Nullable.GetUnderlyingType(tgtType) != null
-                            ? Constant(null, tgtType)
-                            : Default(tgtType);
-                        expr = Condition(hasValue, converted, defaultValue);
+                        var nullableType = typeof(Nullable<>).MakeGenericType(srcUnderlying);
+                        var hasValueProp = nullableType.GetProperty(nameof(Nullable<int>.HasValue));
+                        var valueProp = nullableType.GetProperty(nameof(Nullable<int>.Value));
+                        var hasValue = Property(sourceProperty, hasValueProp);
+                        var getValue = Property(sourceProperty, valueProp);
+                        var trueBranch = Convert(getValue, targetItem.PropertyType);
+                        Expression falseBranch;
+                        if (tgtIsNullableEnum)
+                        {
+                            falseBranch = Constant(null, targetItem.PropertyType);
+                        }
+                        else
+                        {
+                            var defaultEnumValue = Activator.CreateInstance(
+                                Nullable.GetUnderlyingType(sourceItem.PropertyType) ?? sourceItem.PropertyType
+                            );
+                            falseBranch = Constant(defaultEnumValue, targetItem.PropertyType);
+                        }
+                        var enumConvertExpr = Condition(
+                            hasValue,
+                            trueBranch,
+                            falseBranch
+                        );
+
+                        memberBindings.Add(Bind(targetItem, enumConvertExpr));
                     }
                     else
                     {
-                        // 3.2 其它所有枚举↔值类型或枚举↔枚举，直接 Convert
-                        expr = Convert(sourceProperty, tgtType);
+                        var directConvert = Convert(sourceProperty, targetItem.PropertyType);
+                        memberBindings.Add(Bind(targetItem, directConvert));
                     }
-                    memberBindings.Add(Bind(targetItem, expr));
+                    continue;
+                }
+                if ((sourceItem.PropertyType.IsValueType && targetItem.PropertyType.IsEnum)
+                    || (targetItem.PropertyType.IsValueType && sourceItem.PropertyType.IsEnum))
+                {
+                    var expression = Convert(sourceProperty, targetItem.PropertyType);
+                    memberBindings.Add(Bind(targetItem, expression));
                     continue;
                 }
                 else if (targetItem.PropertyType != sourceItem.PropertyType)
                 {
-                    if (targetItem.PropertyType.IsGenericType
-                        && targetItem.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>)
-                        && !sourceItem.PropertyType.IsGenericType)
+                    if (targetItem.PropertyType.IsGenericType && targetItem.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && !sourceItem.PropertyType.IsGenericType)
                     {
                         var converted = Convert(sourceProperty, targetItem.PropertyType);
                         memberBindings.Add(Bind(targetItem, converted));
                     }
-                    else if (sourceItem.PropertyType.IsGenericType
-                             && sourceItem.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>)
-                             && !targetItem.PropertyType.IsGenericType)
+                    else if (sourceItem.PropertyType.IsGenericType && sourceItem.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && !targetItem.PropertyType.IsGenericType)
                     {
-                        var underlying = Nullable.GetUnderlyingType(sourceItem.PropertyType);
-                        if (underlying != null && !underlying.IsEnum)
-                        {
-                            var method = ConvertMethodDir.GetConvertMethod(sourceItem.PropertyType);
-                            var converted = Convert(sourceProperty, targetItem.PropertyType, method);
-                            memberBindings.Add(Bind(targetItem, converted));
-                        }
+                        memberBindings.Add(Bind(targetItem, Convert(sourceProperty, targetItem.PropertyType, ConvertMethodDir.GetConvertMethod(sourceItem.PropertyType))));
                     }
                     else
-                    {
                         continue;
-                    }
                 }
                 else
                     memberBindings.Add(Bind(targetItem, sourceProperty));
@@ -136,10 +145,7 @@ namespace InfrastructureBase.Object
             //创建一个if条件表达式
             var test = NotEqual(parameter, Constant(null, sourceType));// p==null;
             var ifTrue = MemberInit(New(targetType), memberBindings);
-            Expression defaultTarget = Nullable.GetUnderlyingType(targetType) != null
-            ? Constant(null, targetType)
-            : Default(targetType);
-            var condition = Condition(test, ifTrue, defaultTarget);
+            var condition = Condition(test, ifTrue, Constant(null, targetType));
 
             var lambda = Lambda<Func<TSource, TTarget>>(condition, parameter);
             return lambda.Compile();
@@ -248,35 +254,79 @@ namespace InfrastructureBase.Object
                         continue;
                     }
                 }
-                var srcType = sp.PropertyType;
-                var tgtType = tp.PropertyType;
-                var srcEnum = Nullable.GetUnderlyingType(srcType) ?? srcType;
-                var tgtEnum = Nullable.GetUnderlyingType(tgtType) ?? tgtType;
-                if (srcEnum.IsEnum || tgtEnum.IsEnum)
+
+                var srcUnderlying = Nullable.GetUnderlyingType(sp.PropertyType);
+                var tgtUnderlying = Nullable.GetUnderlyingType(tp.PropertyType);
+                bool srcIsNullableEnum = srcUnderlying != null && srcUnderlying.IsEnum;
+                bool tgtIsNullableEnum = tgtUnderlying != null && tgtUnderlying.IsEnum;
+                bool srcIsEnum = sp.PropertyType.IsEnum;
+                bool tgtIsEnum = tp.PropertyType.IsEnum;
+
+                if ((srcIsNullableEnum || tgtIsEnum) || (tgtIsNullableEnum || srcIsEnum))
                 {
-                    Expression expr;
-                    if (Nullable.GetUnderlyingType(srcType) != null)
+                    if (srcIsNullableEnum || srcUnderlying != null)
                     {
-                        var hasValue = Property(srcExpr, nameof(Nullable<int>.HasValue));
-                        var value = Property(srcExpr, nameof(Nullable<int>.Value));
-                        var converted = Convert(value, tgtType);
-                        Expression defaultValue = Nullable.GetUnderlyingType(tgtType) != null
-                            ? Constant(null, tgtType)
-                            : Default(tgtType);
-                        expr = Condition(hasValue, converted, defaultValue);
+                        var nullableType = typeof(Nullable<>).MakeGenericType(srcUnderlying);
+                        var hasValueProp = nullableType.GetProperty(nameof(Nullable<int>.HasValue));
+                        var hasValue = Property(srcExpr, hasValueProp);
+                        var valueProp = nullableType.GetProperty(nameof(Nullable<int>.Value));
+                        var getValue = Property(srcExpr, valueProp);
+                        var trueBranch = Convert(getValue, tp.PropertyType);
+                        Expression falseBranch;
+                        if (tgtIsNullableEnum)
+                        {
+                            falseBranch = Constant(null, tp.PropertyType);
+                        }
+                        else
+                        {
+                            var defaultEnumValue = Activator.CreateInstance(
+                                Nullable.GetUnderlyingType(sp.PropertyType) ?? sp.PropertyType
+                            );
+                            falseBranch = Constant(defaultEnumValue, tp.PropertyType);
+                        }
+                        var enumConvertExpr = Condition(
+                            hasValue,
+                            trueBranch,
+                            falseBranch
+                        );
+                        assigns.Add(Assign(tgtExpr, enumConvertExpr));
+
+
                     }
                     else
                     {
-                        expr = Convert(srcExpr, tgtType);
+                        var directConvert = Convert(srcExpr, tp.PropertyType);
+                        assigns.Add(Assign(tgtExpr, directConvert));
                     }
-                    assigns.Add(Assign(tgtExpr, expr));
                     continue;
                 }
-                if (sp.PropertyType.IsGenericType && sp.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && !tp.PropertyType.IsGenericType && Nullable.GetUnderlyingType(sp.PropertyType) is Type underlying && !underlying.IsEnum)
+                if ((sp.PropertyType.IsValueType && tp.PropertyType.IsEnum)
+                    || (tp.PropertyType.IsValueType && sp.PropertyType.IsEnum))
                 {
-                    var method = ConvertMethodDir.GetConvertMethod(sp.PropertyType);
-                    var converted = Convert(srcExpr, tp.PropertyType, method);
-                    assigns.Add(Assign(tgtExpr, converted));
+                    var expression = Convert(srcExpr, tp.PropertyType);
+                    assigns.Add(Assign(tgtExpr, expression));
+                    continue;
+                }
+                if (tp.PropertyType != sp.PropertyType)
+                {
+                    if (tp.PropertyType.IsGenericType &&
+                        tp.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&
+                        !sp.PropertyType.IsGenericType)
+                    {
+                        var converted = Convert(srcExpr, tp.PropertyType);
+                        assigns.Add(Assign(tgtExpr, converted));
+                        continue;
+                    }
+                    if (sp.PropertyType.IsGenericType &&
+                        sp.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&
+                        !tp.PropertyType.IsGenericType)
+                    {
+                        var method = ConvertMethodDir.GetConvertMethod(sp.PropertyType);
+                        var converted = Convert(srcExpr, tp.PropertyType, method);
+                        assigns.Add(Assign(tgtExpr, converted));
+                        continue;
+                    }
+
                     continue;
                 }
 
