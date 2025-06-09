@@ -54,6 +54,10 @@
      ```
    - 你可以使用 [Swagger](https://swagger.io/tools/swagger-ui/)、[Postman](https://www.postman.com/) 等工具测试自动生成的接口。  
    - 你会发现，接口对应 `IApplicationService` 中的方法会自动暴露成 API 端点。
+## 单元测试
+
+仓库自带 `DDDScaffold.Tests` 项目，基于 **xUnit** 与 EF Core InMemory 实现，直接在根目录执行 `dotnet test` 即可运行全部测试，帮助你验证应用服务逻辑的正确性。
+
 
 ## 许可证
 
