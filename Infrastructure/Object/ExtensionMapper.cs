@@ -346,7 +346,7 @@ namespace InfrastructureBase.Object
         static Dictionary<Type, MethodInfo> keyValues = new Dictionary<Type, MethodInfo>();
         static ConvertMethodDir()
         {
-            keyValues.Add(typeof(Guid?), typeof(ConvertMethodDir).GetMethod(nameof(ConvertMethodDir.InitConv), new Type[] { typeof(Guid) }));
+            keyValues.Add(typeof(Guid?), typeof(ConvertMethodDir).GetMethod(nameof(ConvertMethodDir.InitConv), new Type[] { typeof(Guid?) }));
             keyValues.Add(typeof(decimal?), typeof(ConvertMethodDir).GetMethod(nameof(ConvertMethodDir.InitConv), new Type[] { typeof(decimal?) }));
             keyValues.Add(typeof(float?), typeof(ConvertMethodDir).GetMethod(nameof(ConvertMethodDir.InitConv), new Type[] { typeof(float?) }));
             keyValues.Add(typeof(double?), typeof(ConvertMethodDir).GetMethod(nameof(ConvertMethodDir.InitConv), new Type[] { typeof(double?) }));

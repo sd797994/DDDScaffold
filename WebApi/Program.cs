@@ -15,7 +15,10 @@ using Microsoft.OpenApi.Models;
 using WebApi.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
-
+if (false)//快速连接生产环境使用
+{
+    builder.Configuration.AddJsonFile("appsettings.Production.json", optional: false, reloadOnChange: true);
+}
 builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
 builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
 {
@@ -44,10 +47,16 @@ builder.Services.AddCors(options =>
                    .AllowAnyMethod();
         });
 });
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidateModelAttribute>();
+}).AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     options.JsonSerializerOptions.Converters.Add(new DateTimeConverter());
+}).ConfigureApiBehaviorOptions(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
 });
 builder.Services.AddDbContext<MySqlEfContext>(options => options.UseMySql(builder.Configuration.GetSection("SqlConnectionString").Value, new MySqlServerVersion(new Version(5, 7, 0))));
 RedisDatabaseHelper.Initialize(builder.Configuration.GetSection("RedisConnectionString").Value);
