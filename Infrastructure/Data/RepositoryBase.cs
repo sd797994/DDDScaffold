@@ -48,7 +48,7 @@ namespace Infrastructure.EfDataAccess
         {
             PersistenceObject po;
             if (key == 0)
-                po = await context.Set<PersistenceObject>().FirstOrDefaultAsync(x => x.IsDelete == isDeleted);
+                return default;
             else
                 po = await context.Set<PersistenceObject>().FindAsync(key);
             if (po == null || po.IsDelete != isDeleted)
